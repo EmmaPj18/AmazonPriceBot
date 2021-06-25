@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System.Reflection;
+using System.Threading.Tasks;
 using AmazonPriceBot.Services;
+using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,15 +15,18 @@ namespace AmazonPriceBot
         {
             var host = new HostBuilder()
                 .ConfigureFunctionsWorkerDefaults()
-                .ConfigureAppConfiguration(config => {
+                .ConfigureAppConfiguration(config =>
+                {
                     config.AddEnvironmentVariables();
                 })
-                .ConfigureServices((context, services) => {
+                .ConfigureServices((context, services) =>
+                {
                     services.AddHttpClient();
+                    services.AddMediatR(Assembly.GetExecutingAssembly());
                     var token = context.Configuration["TelegramToken"];
                     services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(token));
                     services.AddScoped<ITelegramService, TelegramService>();
-                })                
+                })
                 .Build();
 
             await host.RunAsync();

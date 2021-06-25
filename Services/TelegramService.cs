@@ -1,7 +1,9 @@
 using System;
 using System.Threading.Tasks;
+using AmazonPriceBot.Commands;
 using AmazonPriceBot.Models;
 using EnumsNET;
+using MediatR;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
@@ -12,21 +14,18 @@ namespace AmazonPriceBot.Services
 {
     public class TelegramService : ITelegramService
     {
-        readonly ITelegramBotClient _bot;
+       
         readonly ILogger<TelegramService> _logger;
+        readonly IMediator _mediator;
 
-        public TelegramService(ITelegramBotClient bot, ILogger<TelegramService> logger)
+        public TelegramService(IMediator mediator, ILogger<TelegramService> logger)
         {
-            _bot = bot;
+            _mediator = mediator;
             _logger = logger;
         }
 
         public async Task HandleAsync(Update update)
         {
-            if (update is null) return;
-
-            if (update.Type != UpdateType.Message) return;
-
             var chat = update.Message.Chat;
             var message = update.Message;
             var actionString = message.Text.Split(' ')[0];
@@ -34,31 +33,9 @@ namespace AmazonPriceBot.Services
 
             _logger.LogInformation($"Bot action {action} triggered by {chat.Username}[{chat.Id}]");
 
-            string sendMessage = await (action switch
-            {
-                Actions.help => Help(message),
-                _ => Help(message),
-            });
-
-            await _bot.SendTextMessageAsync(chat, sendMessage);
-        }
-
-        async Task<string> Help(Message message)
-        {
-            var chat = message.Chat;
-            var me = await _bot.GetMeAsync();
-            var sendMessage = $"Hello {chat.Username}!. I'm {me.Username}, an amazon price checker and tracker.\n";
-            sendMessage += "These are my list of available commands:\n";
-            foreach (var item in Enum.GetValues<Actions>())
-            {
-                var command = item.GetName();
-                var description = item.AsString(EnumFormat.Description);
-                sendMessage += $"/{command} - {description}";
-            }
-
-            return sendMessage;
+            var _ = await _mediator.Send(new ActionCommand(action, update));
         }
     }
 
-    
+
 }

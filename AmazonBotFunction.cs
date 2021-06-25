@@ -7,6 +7,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace AmazonPriceBot
 {
@@ -24,12 +25,16 @@ namespace AmazonPriceBot
         [Function(nameof(AmazonBotFunction))]
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestData request,
-            FunctionContext context)
+            FunctionContext _)
         {
             try
             {
                 var body = await request.ReadAsStringAsync();
                 var update = JsonConvert.DeserializeObject<Update>(body);
+
+                if (update is null) throw new ArgumentException($"{nameof(update)} is null.");
+
+                if (update.Type != UpdateType.Message) throw new ArgumentException("The message is not a text. This bot only accept text messages.");
 
                 await _service.HandleAsync(update);
 
